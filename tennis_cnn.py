@@ -34,12 +34,11 @@ def image_processing(train_dir, test_dir, img_width, img_height, batch_size):
 
     test_datagen = ImageDataGenerator(rescale=1./255)
 
-
     train_processing = train_datagen.flow_from_directory(
             train_dir,
             target_size=(img_width, img_height),
             batch_size=batch_size,
-            color_mode = "grayscale"
+            color_mode = "grayscale",
             #class_mode='binary',
             shuffle=True)
 
@@ -48,7 +47,7 @@ def image_processing(train_dir, test_dir, img_width, img_height, batch_size):
             test_dir,
             target_size=(img_width, img_height),
             batch_size=batch_size,
-            color_mode = "grayscale"
+            color_mode = "grayscale",
             #class_mode='binary',
             shuffle=True)
 
@@ -61,48 +60,37 @@ def image_processing(train_dir, test_dir, img_width, img_height, batch_size):
 def build_net(classes, img_width, img_height, nb_fitlers, pool_size, kernel_size):
 
     model = Sequential()
-
-    model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1],
-                            input_shape=(img_width, img_height))
+    model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1], input_shape=(img_width, img_height, 1)))
     model.add(Activation('relu'))
-    model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1]))
-    model.add(Activation('relu'))
+    #model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1]))
+    #model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=pool_size))
     model.add(Dropout(0.25))
 
     model.add(Flatten())
-    model.add(Dense(128))
-    model.add(Activation('relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(nb_classes))
+    model.add(Dense(classes))
     model.add(Activation('softmax'))
-
-    model.compile(loss='categorical_crossentropy',
-                  optimizer='adadelta',
-                  metrics=['accuracy'])
+    model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
     return model
 
-def fit_net(model, train_processing, n_train_samples, n_test_samples, epoch):
-    fit = model.fit_generator(train_processing,
-                        samples_per_epoch = n_train_samples
-                        nb_epoch = epochs,
-                        validation_data = test_processing,
-                        nb_val_samples = n_test_samples)
-                        accuracy = 'acc: {}, loss: {}, val_acc: {}, val_loss: {}'.format(*fit.history.values())
+def fit_net(model, train_processing, test_processing, n_train_samples, n_test_samples, epoch):
+    fit = model.fit_generator(train_processing, samples_per_epoch = n_train_samples, nb_epoch = epoch, validation_data = test_processing, nb_val_samples = n_test_samples)
+    accuracy = 'acc: {}, loss: {}, val_acc: {}, val_loss: {}'.format(*fit.history.values())
     return accuracy
 
 if __name__ == '__main__':
     #Set Parameters
     img_width, img_height = 150, 150
-    train_dir = '/train'
-    test_dir = '/test'
-    epoch = 10
+    train_dir = 'train'
+    test_dir = 'test'
+    epoch = 1
     batch_size = 128
     pool_size = (2, 2)
     kernel_size = (3, 3)
     nb_filters = 32
 
     #fit_image_generators, build CNN, train_network, save history
-    train_processing, test_processing, classes, n_train_samples, n_test_samples = fit_image_generators(train_dir, test_dir, img_width, img_height, batch_size)
-    model = build_net(classes, img_width, img_height, nb_fitlers, pool_size, kernel_size)
-    hist = fit_net(model, train_processing, epoch, n_train_samples, n_val_samples, batch_size)
+    train_processing, test_processing, classes, n_train_samples, n_test_samples = image_processing(train_dir, test_dir, img_width, img_height, batch_size)
+    model = build_net(classes, img_width, img_height, nb_filters, pool_size, kernel_size)
+    hist = fit_net(model, train_processing, test_processing, n_train_samples, n_test_samples, epoch)
